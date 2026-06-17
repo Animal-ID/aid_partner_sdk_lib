@@ -1,0 +1,44 @@
+{
+  "name": "@animal-id/partner-angular",
+  "version": "0.1.0",
+  "description": "Angular service for the Animal-ID Partner API (injectable + RxJS, standalone providers).",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@animal-id/partner-core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@angular/core": ">=16",
+    "rxjs": ">=7"
+  },
+  "devDependencies": {
+    "@angular/core": "^17.3.0",
+    "rxjs": "^7.8.1",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0"
+  }
+}

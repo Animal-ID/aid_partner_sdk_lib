@@ -1,0 +1,46 @@
+{
+  "name": "@animal-id/partner-nestjs",
+  "version": "0.1.0",
+  "description": "NestJS module for the Animal-ID Partner API (forRoot/forRootAsync + injectable service).",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@animal-id/partner-core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@nestjs/common": ">=9",
+    "reflect-metadata": ">=0.1.13",
+    "rxjs": ">=7"
+  },
+  "devDependencies": {
+    "@nestjs/common": "^10.4.0",
+    "@types/node": "^20.14.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0"
+  }
+}

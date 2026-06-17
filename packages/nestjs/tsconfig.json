@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "types": ["node"],
+    "experimentalDecorators": true,
+    // DI uses explicit @Inject() tokens, so design-time metadata is not required.
+    "emitDecoratorMetadata": false
+  },
+  "include": ["src"]
+}

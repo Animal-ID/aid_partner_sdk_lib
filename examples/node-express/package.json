@@ -1,0 +1,21 @@
+{
+  "name": "@animal-id/example-node-express",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Express demo: server-side SDK usage + a signing proxy for browser clients.",
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "dev": "tsx watch src/server.ts"
+  },
+  "dependencies": {
+    "@animal-id/partner-core": "workspace:*",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
