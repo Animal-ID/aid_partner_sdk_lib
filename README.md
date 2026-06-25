@@ -108,9 +108,17 @@ All methods live under typed resources on the client:
 | --- | --- |
 | `client.dictionaries` | `get(params?)` |
 | `client.owners` | `create(input)`, `search(emailOrPhone)` |
-| `client.animals` | `create(input)`, `get(id)`, `findByIdentifier(type, value)`, `findByIdentifierAny(value)`, `findByOwner(emailOrPhone)`, `update(id, input)` |
+| `client.animals` | `create(input)`, `get(id, opts?)`, `findByIdentifier(type, value, opts?)`, `findByIdentifierAny(value, opts?)`, `findByOwner(emailOrPhone, opts?)`, `update(id, input)`, `requestAccess(id)`, `accessStatus(id)` |
 | `client.procedures` | `create(animalId, body)`, `list(animalId, params?)`, `get(procedureId)` |
 | `client.photos` | `upload(animalId, { file, kind? })`, `delete(animalId, photoId)` |
+
+- Editing an animal (update / procedures / photos) needs access. Without it the API
+  answers `403`; call `animals.requestAccess(id)` and retry once the owner approves
+  (you'll get an `animal_access.approved` webhook — see **Webhooks**). Check the
+  current state any time with `animals.accessStatus(id)` (`granted`/`pending`/`denied`/`none`).
+- Every animal card carries `abilities.can_edit`. Pass `{ expand: ['owners'] }` to a
+  lookup to embed `owners[]` (with `is_main_owner`):
+  `await client.animals.get(id, { expand: ['owners'] })`.
 
 - Success bodies are unwrapped from the `{ payload: [...] }` envelope automatically:
   single-resource methods return the object, list methods return an array.
@@ -207,6 +215,42 @@ const client = new AnimalIdClient({ signer: remoteSigner });
 
 Without `credentials` or `signer`, requests are sent unsigned — useful when your
 own backend proxies and authenticates them, and for the public dictionaries endpoint.
+
+## Webhooks
+
+Animal-ID sends signed `POST` requests to the webhook URL you configure (where you get
+your API keys) when a deferred event happens — e.g. an owner approves or denies a vet's
+access request. Verify and decode deliveries server-side with `WebhookVerifier`
+(in `@animal-id/partner-core`). It's signed like your requests but keyed with a dedicated
+**webhook secret** (shown once in the cabinet):
+
+```ts
+import { WebhookVerifier, isAnimalAccessEvent } from '@animal-id/partner-core';
+
+const verifier = new WebhookVerifier(process.env.AID_WEBHOOK_SECRET!); // 300s replay window
+
+// Express — mount with a raw body parser so you verify the EXACT bytes received:
+// app.post('/animal-id/webhook', express.raw({ type: 'application/json' }), handler)
+app.post('/animal-id/webhook', async (req, res) => {
+  try {
+    const event = await verifier.constructEvent(req.body.toString('utf8'), req.headers, req.originalUrl);
+    if (isAnimalAccessEvent(event)) {
+      event.result.animal_id;          // typed: granted/denied + animal_id, requester_user_gid, ...
+    }
+    res.status(204).end();             // acknowledge with any 2xx
+  } catch {
+    res.status(401).end();             // AnimalIdWebhookError → reject
+  }
+});
+```
+
+- `constructEvent(rawBody, headers, path)` verifies the signature + timestamp and returns a
+  typed `WebhookEvent`; it throws `AnimalIdWebhookError` on a bad signature, stale timestamp,
+  or unparseable body. `path` is the path (+ query) of your webhook URL as received.
+- `verify(...): Promise<boolean>` is the boolean form; `parse(...)` decodes without verifying.
+- Disable the replay check with `new WebhookVerifier(secret, { tolerance: 0 })`.
+- `headers` accepts a Fetch `Headers`, Node's `req.headers`, or any plain object.
+- Failed deliveries can be resent from your cabinet (delivery log).
 
 ## Develop
 

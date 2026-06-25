@@ -12,10 +12,19 @@ export {
   AnimalIdNetworkError,
   AnimalIdApiError,
   AnimalIdValidationError,
+  AnimalIdWebhookError,
 } from './errors.js';
 
 export { createHmacSigner, buildStringToSign } from './signing.js';
 export type { Signer, SignInput, SignedHeaders } from './signing.js';
+
+// Webhooks — verify + decode incoming deliveries (server-side).
+export {
+  WebhookVerifier,
+  isAnimalAccessEvent,
+  DEFAULT_WEBHOOK_TOLERANCE_SECONDS,
+} from './webhooks.js';
+export type { WebhookHeaders, WebhookVerifierOptions } from './webhooks.js';
 
 export { unwrapOne, unwrapMany } from './envelope.js';
 
@@ -52,12 +61,24 @@ export type {
   Owner,
   // animals
   AnimalCard,
+  AnimalAbilities,
+  AnimalOwnerExpanded,
+  AnimalExpand,
+  AnimalLookupOptions,
   AnimalIdentifierInput,
   AnimalOwnerInput,
   CreateAnimalInput,
   CreatedAnimal,
   IdentifierType,
   UpdateAnimalInput,
+  // access requests
+  AnimalAccessStatus,
+  AnimalAccessRequest,
+  // webhooks
+  WebhookEvent,
+  WebhookEventType,
+  AnimalAccessWebhookResult,
+  AnimalAccessWebhookEvent,
   // procedures
   CreateProceduresResult,
   ProcedureInput,

@@ -25,6 +25,8 @@ export {
   useCreateProcedures,
   useUploadPhoto,
   useDeletePhoto,
+  useAnimalAccessStatus,
+  useRequestAnimalAccess,
 } from './composables.js';
 
 export * from '@animal-id/partner-core';

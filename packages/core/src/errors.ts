@@ -48,3 +48,14 @@ export class AnimalIdValidationError extends AnimalIdApiError {
     this.name = 'AnimalIdValidationError';
   }
 }
+
+/**
+ * An incoming webhook could not be trusted: missing signature/timestamp headers, a stale
+ * timestamp (replay window exceeded), a signature mismatch, or an unparseable body.
+ */
+export class AnimalIdWebhookError extends AnimalIdError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AnimalIdWebhookError';
+  }
+}

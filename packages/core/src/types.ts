@@ -220,7 +220,36 @@ export interface AnimalCard {
   deceased?: boolean;
   died_at?: string | null;
   status?: number;
+  /** Per-animal access flags for the authenticated partner user. */
+  abilities?: AnimalAbilities;
+  /** Embedded owners — present only when requested via the `owners` expand. */
+  owners?: AnimalOwnerExpanded[];
 }
+
+/** Per-animal access flags carried by every animal card. */
+export interface AnimalAbilities {
+  /** Whether the authenticated partner user may edit this animal (data, procedures, photos). */
+  can_edit?: boolean;
+}
+
+/** An animal's owner as embedded by the `owners` expand (Owner + is_main_owner). */
+export interface AnimalOwnerExpanded {
+  user_gid: number;
+  has_account: boolean;
+  email: string | null;
+  phone: string | null;
+  display_hint: string;
+  language?: string | null;
+  /** Zero-padded ISO 3166-1 numeric string (e.g. "804"). */
+  country_id?: string | null;
+  is_main_owner: boolean;
+}
+
+/** Expand keys accepted by the animal lookups (sent as X-Eternity-Expand). */
+export type AnimalExpand = 'owners';
+
+/** Lookup options: the common per-call overrides plus expand keys to embed. */
+export type AnimalLookupOptions = RequestOptions & { expand?: AnimalExpand[] };
 
 /** Identifier kind used by the typed `by-identifier/{type}/{value}` lookup. */
 export type IdentifierType = 'microchip' | 'qr_tag';
@@ -231,6 +260,23 @@ export interface UpdateAnimalInput {
   sterilization_status?: boolean;
   /** true → mark the animal dead. */
   deceased?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Animal access requests
+// ---------------------------------------------------------------------------
+
+export type AnimalAccessStatus = 'granted' | 'pending' | 'denied' | 'none';
+
+/** State of a partner's access to an animal (POST/GET /animals/{id}/access-request). */
+export interface AnimalAccessRequest {
+  status: AnimalAccessStatus;
+  /** ISO 8601 — when the request was raised (null when granted/none). */
+  requested_at?: string | null;
+  /** ISO 8601 — when the request expires and you may retry (null when granted/none). */
+  expires_at?: string | null;
+  /** Seconds until you may request again (0 once elapsed; null when granted/none). */
+  retry_after_seconds?: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -327,3 +373,41 @@ export interface UploadPhotoInput {
 export interface UploadedPhoto {
   id: number;
 }
+
+// ---------------------------------------------------------------------------
+// Webhooks
+// ---------------------------------------------------------------------------
+
+/** Known event keys (any future string is also accepted). */
+export type WebhookEventType =
+  | 'animal_access.approved'
+  | 'animal_access.denied'
+  | (string & {});
+
+/** A decoded webhook delivery. Wire shape: `{ id, event, occurred_at, result }`. */
+export interface WebhookEvent<T = unknown> {
+  /** Unique delivery id (matches the X-Eternity-Webhook-Id header). */
+  id: string;
+  /** Event key, e.g. `animal_access.approved`. */
+  event: WebhookEventType;
+  /** ISO 8601 time the event occurred. */
+  occurred_at: string;
+  /** Event-specific data. */
+  result: T;
+}
+
+/** `result` payload of the `animal_access.*` events. */
+export interface AnimalAccessWebhookResult {
+  animal_id: string;
+  requester_user_gid: number | null;
+  status: 'granted' | 'denied';
+  requested_at?: string;
+  expires_at?: string;
+  retry_after_seconds?: number;
+  decided_at?: string;
+}
+
+/** Discriminated alias for the access-decision events. */
+export type AnimalAccessWebhookEvent = WebhookEvent<AnimalAccessWebhookResult> & {
+  event: 'animal_access.approved' | 'animal_access.denied';
+};

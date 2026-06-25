@@ -26,6 +26,8 @@ export {
   useCreateProcedures,
   useUploadPhoto,
   useDeletePhoto,
+  useAnimalAccessStatus,
+  useRequestAnimalAccess,
 } from './hooks.js';
 
 // Re-export the client + types so apps can depend on a single package.

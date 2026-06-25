@@ -100,3 +100,17 @@ export function useDeletePhoto() {
       client.photos.delete(vars.animalId, vars.photoId, vars.opts),
   );
 }
+
+/** Current access state for an animal (granted/pending/denied/none). */
+export function useAnimalAccessStatus(id: string, options?: QueryOptions) {
+  const client = useAnimalIdClient();
+  return useQuery(() => client.animals.accessStatus(id), options);
+}
+
+/** Ask the owner for access to an animal: `mutate({ id })`. */
+export function useRequestAnimalAccess() {
+  const client = useAnimalIdClient();
+  return useMutation((vars: { id: string; opts?: RequestOptions }) =>
+    client.animals.requestAccess(vars.id, vars.opts),
+  );
+}

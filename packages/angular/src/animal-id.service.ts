@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { from, type Observable } from 'rxjs';
 import {
   AnimalIdClient,
+  type AnimalAccessRequest,
   type AnimalCard,
   type CreateAnimalInput,
   type CreateOwnerInput,
@@ -74,6 +75,14 @@ export class AnimalIdService {
 
   updateAnimal(id: string, input: UpdateAnimalInput, opts?: RequestOptions): Observable<void> {
     return from(this.client.animals.update(id, input, opts));
+  }
+
+  requestAnimalAccess(id: string, opts?: RequestOptions): Observable<AnimalAccessRequest> {
+    return from(this.client.animals.requestAccess(id, opts));
+  }
+
+  animalAccessStatus(id: string, opts?: RequestOptions): Observable<AnimalAccessRequest> {
+    return from(this.client.animals.accessStatus(id, opts));
   }
 
   // --- Procedures ---
