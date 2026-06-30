@@ -1,6 +1,6 @@
 {
   "name": "@animal-id/partner-vue",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Vue 3 composables for the Animal-ID Partner API (plugin + query/mutation composables).",
   "license": "MIT",
   "type": "module",

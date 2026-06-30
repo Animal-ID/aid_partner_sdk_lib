@@ -1,6 +1,6 @@
 {
   "name": "aid-partner-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Animal-ID Partner API SDK — isomorphic core + thin framework adapters (React, Vue, Angular, NestJS).",
   "type": "module",
