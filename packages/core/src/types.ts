@@ -312,6 +312,12 @@ export interface ProcedureInput {
   type_specific_payload?: Record<string, unknown>;
 }
 
+/**
+ * @deprecated Older gateways answered POST /procedures with this internal shape
+ * (`procedure_type_id` / `performed_at` / `extra_fields`). Current gateways return
+ * the same {@link ProcedureListItem} card as GET. Kept only for consumers pinned
+ * to an old server; will be removed in a future major.
+ */
 export interface ProcedureRecord {
   id: number;
   animal_id?: string;
@@ -326,7 +332,8 @@ export interface ProcedureRecord {
 export interface CreateProceduresResult {
   /** The visit opened/used for this batch. */
   appointment_id: number;
-  procedures: ProcedureRecord[];
+  /** The recorded procedures — same card as GET list/show. */
+  procedures: ProcedureListItem[];
 }
 
 export interface ProcedureListItem {
