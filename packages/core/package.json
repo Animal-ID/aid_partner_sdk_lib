@@ -1,6 +1,6 @@
 {
   "name": "@animal-id/partner-core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Isomorphic TypeScript client for the Animal-ID Partner API (HMAC-SHA256 signing, zero runtime dependencies).",
   "license": "MIT",
   "type": "module",

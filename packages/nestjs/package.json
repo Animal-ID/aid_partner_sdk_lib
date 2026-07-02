@@ -1,6 +1,6 @@
 {
   "name": "@animal-id/partner-nestjs",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "NestJS module for the Animal-ID Partner API (forRoot/forRootAsync + injectable service).",
   "license": "MIT",
   "type": "module",
