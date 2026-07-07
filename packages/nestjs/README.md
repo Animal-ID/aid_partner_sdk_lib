@@ -63,7 +63,7 @@ export class PetsService {
       species: 3,
       is_microchip: false,
       nickname: 'Барсік',
-      owners: [{ user_gid: owner.user_gid }],
+      owners: [{ public_id: owner.public_id! }],
     });
   }
 }

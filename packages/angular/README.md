@@ -45,7 +45,7 @@ export class PetsComponent {
   registerOwner() {
     this.aid
       .createOwner({ email: 'jane@example.com', consent: { account_creation: true } })
-      .subscribe((owner) => console.log(owner.user_gid));
+      .subscribe((owner) => console.log(owner.public_id));
   }
 }
 ```
