@@ -31,7 +31,11 @@ export interface AnimalIdCredentials {
 export interface AnimalIdClientConfig {
   /** Gateway origin. Default: `https://gw.animal-id.net`. All paths are prefixed with `/v1/partner`. */
   baseUrl?: string;
-  /** Optional `X-Eternity-Animal-ID-Version` date version (YYYY-MM-DD). */
+  /**
+   * Optional `X-Eternity-Animal-ID-Version` date version (YYYY-MM-DD). Defaults to the version
+   * this SDK targets (2026-07-04), which attaches owners at registration by `public_id`. Pin an
+   * older date to keep the legacy `user_gid` owner-attach contract.
+   */
   version?: string;
   /**
    * HMAC credentials. When provided, the SDK signs every request itself.
@@ -138,7 +142,10 @@ export interface CreateOwnerInput {
 }
 
 export interface Owner {
+  /** Legacy numeric owner id (pre-2026-07-04 versions). */
   user_gid: number;
+  /** Stable public owner identifier; pass this into animal registration. */
+  public_id: string | null;
   has_account: boolean;
   email: string | null;
   phone: string | null;
@@ -152,9 +159,11 @@ export interface Owner {
 // ---------------------------------------------------------------------------
 
 export interface AnimalOwnerInput {
-  /** Attach mode: existing global owner id. */
+  /** Attach mode (API version >= 2026-07-04): existing owner `public_id` from owners.search(). */
+  public_id?: string;
+  /** Attach mode (legacy versions): existing global owner id. */
   user_gid?: number;
-  /** Inline mode: one of email/phone required when there is no user_gid. */
+  /** Inline mode: one of email/phone required when there is no public_id/user_gid. */
   email?: string;
   phone?: string;
   first_name?: string;
@@ -234,7 +243,10 @@ export interface AnimalAbilities {
 
 /** An animal's owner as embedded by the `owners` expand (Owner + is_main_owner). */
 export interface AnimalOwnerExpanded {
+  /** Legacy numeric owner id (pre-2026-07-04 versions). */
   user_gid: number;
+  /** Stable public owner identifier; pass this into animal registration. */
+  public_id: string | null;
   has_account: boolean;
   email: string | null;
   phone: string | null;

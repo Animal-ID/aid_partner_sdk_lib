@@ -12,6 +12,13 @@ import { randomUuid } from './uuid.js';
 const DEFAULT_BASE_URL = 'https://gw.animal-id.net';
 const API_PREFIX = '/v1/partner';
 
+/**
+ * API version this SDK targets (X-Eternity-Animal-ID-Version). From this version, owners are
+ * attached at registration by `public_id` rather than the legacy numeric `user_gid`. Override
+ * with `version` in the client config to pin an older contract.
+ */
+const DEFAULT_API_VERSION = '2026-07-04';
+
 export type QueryValue = string | number | boolean | undefined | null;
 
 export interface RequestSpec {
@@ -41,7 +48,7 @@ export interface TransportResult<T = unknown> {
 /** Low-level HTTP engine: builds the canonical request, signs it, and normalises errors. */
 export class Transport {
   readonly baseUrl: string;
-  private readonly version?: string;
+  private readonly version: string;
   private readonly fetchImpl: FetchLike;
   private readonly providedSubtle?: SubtleCrypto;
   private readonly signer?: Signer;
@@ -64,7 +71,7 @@ export class Transport {
       ? config.fetch
       : (input, init) => (globalThis.fetch as FetchLike)(input, init);
 
-    this.version = config.version;
+    this.version = config.version ?? DEFAULT_API_VERSION;
     this.providedSubtle = config.subtle;
     this.signer =
       config.signer ??

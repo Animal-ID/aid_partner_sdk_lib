@@ -29,7 +29,7 @@ const found = await client.animals.findByIdentifier('microchip', '90026300012345
 | `baseUrl` | `https://gw.animal-id.net` | gateway origin; `/v1/partner` is added automatically |
 | `credentials` | — | `{ appId, publicKey, privateKey }` → built-in HMAC signing (**server-side only**) |
 | `signer` | — | custom `Signer` (e.g. backend proxy) — takes precedence over `credentials` |
-| `version` | — | `X-Eternity-Animal-ID-Version` (YYYY-MM-DD) |
+| `version` | `2026-07-04` | `X-Eternity-Animal-ID-Version` (YYYY-MM-DD); from this version registration attaches owners by `public_id` |
 | `fetch` | `globalThis.fetch` | inject undici/node-fetch/a mock |
 | `subtle` | `globalThis.crypto.subtle` | inject Web Crypto (needed on Node 18) |
 | `timeoutMs` | — | per-request timeout |

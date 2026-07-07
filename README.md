@@ -85,7 +85,8 @@ const animal = await client.animals.create({
   is_microchip: true,
   microchip: '900263000123456',
   nickname: 'Барсік',
-  owners: [{ user_gid: owner.user_gid }],
+  // Attach the owner by their stable public_id (SDK targets API version 2026-07-04 by default).
+  owners: [{ public_id: owner.public_id! }],
 });
 
 await client.procedures.create(animal.id, {
@@ -182,7 +183,7 @@ Every signed request carries these headers (the SDK adds them for you):
 | `X-Eternity-Timestamp` | Unix seconds (±300s of server time) |
 | `X-Eternity-Signature` | `hex(hmac_sha256(stringToSign, privateKey))` |
 | `X-Eternity-Idempotency-Key` | UUID, on every POST/PATCH/DELETE |
-| `X-Eternity-Animal-ID-Version` | optional `YYYY-MM-DD` version |
+| `X-Eternity-Animal-ID-Version` | `YYYY-MM-DD` version (SDK sends `2026-07-04` by default; from it, registration attaches owners by `public_id`) |
 
 ```
 stringToSign = METHOD + "\n" + path[?query] + "\n" + sha256_hex(rawBody) + "\n" + timestamp
