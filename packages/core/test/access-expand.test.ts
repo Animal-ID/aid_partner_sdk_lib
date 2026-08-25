@@ -42,7 +42,13 @@ describe('owners expand + abilities', () => {
           id: '8xK3pQzVnB7rL2qF',
           abilities: { can_edit: true },
           owners: [
-            { user_gid: 90231, is_main_owner: true, display_hint: 'Ja*** D.', country_id: '804' },
+            {
+              user_gid: 90231,
+              is_main_owner: true,
+              display_hint: 'Ja*** D.',
+              country_id: '804',
+              external_owner_id: 'crm-4471',
+            },
             { user_gid: 90232, is_main_owner: false },
           ],
         },
@@ -56,6 +62,9 @@ describe('owners expand + abilities', () => {
     expect(animal?.owners).toHaveLength(2);
     expect(animal?.owners?.[0].is_main_owner).toBe(true);
     expect(animal?.owners?.[0].country_id).toBe('804');
+    expect(animal?.owners?.[0].external_owner_id).toBe('crm-4471');
+    // A co-owner you never labelled — or one only another partner knows — carries no id.
+    expect(animal?.owners?.[1].external_owner_id).toBeUndefined();
     expect(animal?.owners?.[1].is_main_owner).toBe(false);
   });
 

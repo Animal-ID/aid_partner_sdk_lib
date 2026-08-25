@@ -58,7 +58,11 @@ export class PetsService {
   constructor(private readonly aid: AnimalIdService) {}
 
   async register(email: string) {
-    const owner = await this.aid.owners.create({ email, consent: { account_creation: true } });
+    const owner = await this.aid.owners.create({
+      email,
+      external_owner_id: 'crm-4471', // optional: your own id for this person
+      consent: { account_creation: true },
+    });
     return this.aid.animals.create({
       species: 3,
       is_microchip: false,

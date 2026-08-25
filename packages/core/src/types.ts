@@ -138,6 +138,11 @@ export interface CreateOwnerInput {
   language?: string;
   /** Zero-padded ISO 3166-1 numeric string (e.g. "804"). */
   country?: string;
+  /**
+   * Your own id for this person. Stored once, on first contact, and never overwritten.
+   * Scoped to your integration — you never see the id another partner uses for the same person.
+   */
+  external_owner_id?: string;
   consent: Consent;
 }
 
@@ -152,6 +157,11 @@ export interface Owner {
   display_hint: string;
   language?: string | null;
   country_id?: number | null;
+  /**
+   * Your own id for this person. Stored once, on first contact, and never overwritten.
+   * Scoped to your integration — you never see the id another partner uses for the same person.
+   */
+  external_owner_id?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -170,6 +180,11 @@ export interface AnimalOwnerInput {
   last_name?: string;
   language?: string;
   country?: string;
+  /**
+   * Your own id for this person. Stored once, on first contact, and never overwritten.
+   * Scoped to your integration — you never see the id another partner uses for the same person.
+   */
+  external_owner_id?: string;
   /** Inline mode: required when registering a brand-new owner. */
   consent?: Consent;
 }
@@ -254,6 +269,11 @@ export interface AnimalOwnerExpanded {
   language?: string | null;
   /** Zero-padded ISO 3166-1 numeric string (e.g. "804"). */
   country_id?: string | null;
+  /**
+   * Your own id for this person. Stored once, on first contact, and never overwritten.
+   * Scoped to your integration — you never see the id another partner uses for the same person.
+   */
+  external_owner_id?: string | null;
   is_main_owner: boolean;
 }
 

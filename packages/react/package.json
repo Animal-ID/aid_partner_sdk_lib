@@ -1,6 +1,6 @@
 {
   "name": "@animal-id/partner-react",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "React hooks for the Animal-ID Partner API (provider + query/mutation hooks).",
   "license": "MIT",
   "type": "module",

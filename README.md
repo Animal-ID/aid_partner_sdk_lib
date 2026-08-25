@@ -77,6 +77,7 @@ const dictionaries = await client.dictionaries.get({ lang: 'uk' });
 
 const owner = await client.owners.create({
   email: 'jane@example.com',
+  external_owner_id: 'crm-4471', // optional: your own id for this person
   consent: { account_creation: true },
 });
 
@@ -123,6 +124,34 @@ All methods live under typed resources on the client:
 
 - Success bodies are unwrapped from the `{ payload: [...] }` envelope automatically:
   single-resource methods return the object, list methods return an array.
+### Your own owner identifier
+
+`external_owner_id` is the id this person has in **your** system. Send it when creating an owner
+(or on an inline owner during animal registration) and it comes back from `owners.create`,
+`owners.search`, and from owners embedded through the `owners` expand.
+
+```ts
+await client.owners.create({
+  email: 'jane@example.com',
+  external_owner_id: 'crm-4471',
+  consent: { account_creation: true },
+});
+
+const owner = await client.owners.search('jane@example.com');
+owner?.external_owner_id; // 'crm-4471'
+```
+
+Two properties worth knowing before you rely on it:
+
+- **Written once**, on first contact, and **never overwritten** — sending a different value later
+  does not change it.
+- **Scoped to your integration**: you only ever see the id you sent. What another partner calls the
+  same person is not visible to you, and yours is not visible to them.
+
+It is the key both sides join on when your export has to be reconciled against our records.
+
+## Notes
+
 - `owners.search`, `animals.get`, and `procedures.get` return `null` on `404`
   instead of throwing.
 - Non-2xx responses throw `AnimalIdApiError` (or `AnimalIdValidationError` for 422),

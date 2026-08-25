@@ -10,6 +10,10 @@ export class OwnersResource {
   /**
    * `POST /v1/partner/owners` — create or resolve an owner (idempotent by email/phone).
    * Requires `consent.account_creation: true`.
+   *
+   * Send `external_owner_id` to record your own id for this person: it is stored on first
+   * contact, never overwritten, and comes back from {@link search} and from owners embedded
+   * through the `owners` expand.
    */
   async create(input: CreateOwnerInput, opts?: RequestOptions): Promise<Owner> {
     const result = await this.transport.request(
