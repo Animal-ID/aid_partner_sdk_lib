@@ -4,6 +4,14 @@ import type { AnimalIdClientConfig } from '@animal-id/partner-core';
 /** Injection token for the resolved module options. */
 export const ANIMAL_ID_OPTIONS = 'ANIMAL_ID_OPTIONS';
 
+/**
+ * Injection token for the provisioning-plane options.
+ *
+ * Separate from {@link ANIMAL_ID_OPTIONS} because it holds a different key: the platform key that
+ * provisions clinics and doctors, which never reaches animal data.
+ */
+export const ANIMAL_ID_PLATFORM_OPTIONS = 'ANIMAL_ID_PLATFORM_OPTIONS';
+
 export interface AnimalIdModuleOptions extends AnimalIdClientConfig {
   /** Register the module globally (no need to import it in every feature module). */
   isGlobal?: boolean;

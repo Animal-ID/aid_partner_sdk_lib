@@ -6,6 +6,9 @@
 
 export { AnimalIdClient, createAnimalIdClient } from './client.js';
 
+// The provisioning plane — a separate key, hence a separate client.
+export { PlatformClient, createPlatformClient } from './platform-client.js';
+
 export {
   AnimalIdError,
   AnimalIdConfigError,
@@ -22,6 +25,7 @@ export type { Signer, SignInput, SignedHeaders } from './signing.js';
 export {
   WebhookVerifier,
   isAnimalAccessEvent,
+  isConsentEvent,
   DEFAULT_WEBHOOK_TOLERANCE_SECONDS,
 } from './webhooks.js';
 export type { WebhookHeaders, WebhookVerifierOptions } from './webhooks.js';
@@ -29,7 +33,7 @@ export type { WebhookHeaders, WebhookVerifierOptions } from './webhooks.js';
 export { unwrapOne, unwrapMany } from './envelope.js';
 
 // Low-level building blocks for advanced use (custom resources, signing proxies, tests).
-export { Transport } from './transport.js';
+export { Transport, PLATFORM_API_PREFIX } from './transport.js';
 export type { RequestSpec, TransportResult, QueryValue } from './transport.js';
 export { sha256Hex, hmacSha256Hex, getSubtle, toHex } from './crypto.js';
 export { randomUuid } from './uuid.js';
@@ -40,6 +44,9 @@ export { OwnersResource } from './resources/owners.js';
 export { AnimalsResource } from './resources/animals.js';
 export { ProceduresResource } from './resources/procedures.js';
 export { PhotosResource } from './resources/photos.js';
+export { ClinicsResource } from './resources/clinics.js';
+export { DoctorsResource } from './resources/doctors.js';
+export { ConsentsResource, isConsentUsable, isConsentFinished } from './resources/consents.js';
 
 export { ProcedureTypes } from './types.js';
 export type {
@@ -79,6 +86,17 @@ export type {
   WebhookEventType,
   AnimalAccessWebhookResult,
   AnimalAccessWebhookEvent,
+  ConsentWebhookResult,
+  ConsentWebhookEvent,
+  // provisioning plane
+  Clinic,
+  ConsentKind,
+  ConsentRequest,
+  ConsentStatus,
+  DoctorCredentials,
+  ProvisionClinicInput,
+  SearchClinicsParams,
+  SeatDoctorInput,
   // procedures
   CreateProceduresResult,
   ProcedureInput,

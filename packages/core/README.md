@@ -74,6 +74,26 @@ It is the key both sides join on when your export has to be reconciled against o
 
 Every method accepts a final `RequestOptions` argument: `{ idempotencyKey?, signal?, headers?, version? }`.
 
+### Provisioning plane (`PlatformClient`)
+
+A **separate client** for a separate key. The server has two route groups resolving different
+application types, so a platform key answers `401` on `/v1/partner/` and a doctor's key answers
+`401` on `/v1/platform/`. Server-side only — a platform key mints credentials and has no business
+in a browser bundle.
+
+- `clinics.search({ query, limit? })` — search before you provision; `Clinic.linked` says whether
+  it is one of yours. `clinics.provision(input)` — a stable `external_org_id` makes a retried
+  signup resolve to the same clinic instead of making another.
+- `doctors.seat(clinicPublicId, input)` — create/match the doctor, seat them, return their key.
+  **`private_key` comes back once.** `doctors.credentials(clinicPublicId, doctorPublicId)` — for a
+  doctor who already exists and has agreed to the handover.
+- `consents.requestKeyHandover(doctorPublicId)`,
+  `consents.requestClinicMembership(doctorPublicId, clinicPublicId)`, `consents.status(publicId)`.
+  Asking twice returns the open request rather than raising a second.
+- `isConsentUsable(consent)` — not the same as `status === 'approved'`: an approval expires, so a
+  year-old yes is not something you may act on. `isConsentFinished(consent)` — denied, expired or
+  revoked.
+
 ## Errors
 
 `AnimalIdApiError` (with `.status`, `.payload`, `.requestId`), `AnimalIdValidationError`

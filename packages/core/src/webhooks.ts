@@ -1,6 +1,6 @@
 import { getSubtle, hmacSha256Hex, sha256Hex } from './crypto.js';
 import { AnimalIdWebhookError } from './errors.js';
-import type { AnimalAccessWebhookEvent, WebhookEvent } from './types.js';
+import type { AnimalAccessWebhookEvent, ConsentWebhookEvent, WebhookEvent } from './types.js';
 
 const HEADER_SIGNATURE = 'x-eternity-webhook-signature';
 const HEADER_TIMESTAMP = 'x-eternity-webhook-timestamp';
@@ -115,6 +115,22 @@ export class WebhookVerifier {
 /** True for `animal_access.approved` / `animal_access.denied` — narrows `result` to the typed shape. */
 export function isAnimalAccessEvent(event: WebhookEvent): event is AnimalAccessWebhookEvent {
   return event.event === 'animal_access.approved' || event.event === 'animal_access.denied';
+}
+
+/**
+ * True for any `consent.*` delivery — narrows `result` to the typed shape.
+ *
+ * Handle `consent.revoked` in particular: a permission can be withdrawn at any time, a handed-over
+ * key stops working the moment it is, and without this event you would learn of it when your next
+ * call starts failing.
+ */
+export function isConsentEvent(event: WebhookEvent): event is ConsentWebhookEvent {
+  return (
+    event.event === 'consent.approved' ||
+    event.event === 'consent.denied' ||
+    event.event === 'consent.revoked' ||
+    event.event === 'consent.expired'
+  );
 }
 
 /** Parse a raw webhook body into an event, validating it is a real Animal-ID delivery. */
