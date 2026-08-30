@@ -1,5 +1,9 @@
 import { webcrypto } from 'node:crypto';
-import { AnimalIdClient, type AnimalIdClientConfig } from '@animal-id/partner-core';
+import {
+  AnimalIdClient,
+  PlatformClient,
+  type AnimalIdClientConfig,
+} from '@animal-id/partner-core';
 
 export interface CapturedRequest {
   url: string;
@@ -52,6 +56,21 @@ export function makeClient(routes: RouteResolver, config: Partial<AnimalIdClient
   const client = new AnimalIdClient({
     baseUrl: 'https://gw.test',
     credentials: { appId: 'aid_app_test', publicKey: 'pk_test', privateKey: 'sk_test' },
+    fetch: fetchImpl,
+    subtle: webcrypto.subtle as unknown as SubtleCrypto,
+    now: () => 1_700_000_000_000,
+    idempotencyKeyFactory: () => 'idem-fixed',
+    ...config,
+  });
+  return { client, calls };
+}
+
+/** The same, for the provisioning plane — a different key, hence a different client. */
+export function makePlatformClient(routes: RouteResolver, config: Partial<AnimalIdClientConfig> = {}) {
+  const { fetchImpl, calls } = createMockFetch(routes);
+  const client = new PlatformClient({
+    baseUrl: 'https://gw.test',
+    credentials: { appId: 'aid_app_platform', publicKey: 'pk_test', privateKey: 'sk_test' },
     fetch: fetchImpl,
     subtle: webcrypto.subtle as unknown as SubtleCrypto,
     now: () => 1_700_000_000_000,

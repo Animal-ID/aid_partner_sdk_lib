@@ -77,6 +77,7 @@ const dictionaries = await client.dictionaries.get({ lang: 'uk' });
 
 const owner = await client.owners.create({
   email: 'jane@example.com',
+  external_owner_id: 'crm-4471', // optional: your own id for this person
   consent: { account_creation: true },
 });
 
@@ -101,12 +102,28 @@ await client.procedures.create(animal.id, {
 > `signer` that delegates to a backend signing endpoint — see
 > [Browser usage](#browser-usage-without-leaking-the-private-key).
 
+## Two planes, two keys
+
+| | `PlatformClient` | `AnimalIdClient` |
+| --- | --- | --- |
+| Does | provisions clinics and doctors, asks for permissions | animals, owners, procedures, photos |
+| Signs with | your **platform key**, issued once when your partner account is set up | a **doctor's key**, returned when you seat them or collect their credentials |
+| Cannot | ever reach animal data | provision anything |
+
+Not two modes of one key: the server has two route groups resolving **different application
+types**, so a platform key answers `401` on `/v1/partner/` and a doctor's key answers `401` on
+`/v1/platform/`. They are separate clients here so the two cannot be confused — and so a platform
+key never ends up in a browser bundle.
+
 ## API surface
 
 All methods live under typed resources on the client:
 
 | Resource | Methods |
 | --- | --- |
+| `platform.clinics` | `search({ query, limit? })`, `provision(input)` |
+| `platform.doctors` | `seat(clinicPublicId, input)`, `credentials(clinicPublicId, doctorPublicId)` |
+| `platform.consents` | `requestKeyHandover(doctorPublicId)`, `requestClinicMembership(doctorPublicId, clinicPublicId)`, `request(input)`, `status(publicId)` |
 | `client.dictionaries` | `get(params?)` |
 | `client.owners` | `create(input)`, `search(emailOrPhone)` |
 | `client.animals` | `create(input)`, `get(id, opts?)`, `findByIdentifier(type, value, opts?)`, `findByIdentifierAny(value, opts?)`, `findByOwner(emailOrPhone, opts?)`, `update(id, input)`, `requestAccess(id)`, `accessStatus(id)` |
@@ -123,6 +140,100 @@ All methods live under typed resources on the client:
 
 - Success bodies are unwrapped from the `{ payload: [...] }` envelope automatically:
   single-resource methods return the object, list methods return an array.
+
+### Provisioning: clinics and doctors
+
+This is where an integration starts — you create the accounts, then collect the keys you will
+work with.
+
+```ts
+import { PlatformClient, AnimalIdClient, isConsentUsable } from '@animal-id/partner-core';
+
+const platform = new PlatformClient({ credentials: platformKey }); // server-side only
+
+// Search first: a clinic already on Animal-ID has a director and possibly patients, and a second
+// copy of it splits both. `linked` tells you whether it is one of yours.
+const [existing] = await platform.clinics.search({ query: 'Лапа' });
+
+const clinic =
+  existing ??
+  (await platform.clinics.provision({
+    external_org_id: 'crm-clinic-118', // stable — a repeat call resolves instead of duplicating
+    name: 'Лапа',
+    director_public_id: director.public_id,
+  }));
+
+const doctor = await platform.doctors.seat(clinic.public_id, {
+  email: 'doctor@example.com',
+  external_doctor_id: 'crm-doc-4471',
+  consent: { account_creation: true },
+});
+
+// doctor.private_key is returned ONCE. Store it before you do anything else.
+const vet = new AnimalIdClient({
+  credentials: {
+    appId: doctor.app_id,
+    publicKey: doctor.public_key,
+    privateKey: doctor.private_key,
+  },
+});
+```
+
+### A doctor who already exists
+
+Their key signs as them, so only they can allow you to hold one:
+
+```ts
+const consent = await platform.consents.requestKeyHandover(doctorPublicId);
+// The doctor gets an email and decides in their own cabinet, under "Partner access".
+
+const current = await platform.consents.status(consent.public_id);
+if (isConsentUsable(current)) {
+  const credentials = await platform.doctors.credentials(clinicPublicId, doctorPublicId);
+}
+```
+
+`isConsentUsable()` is not the same as `status === 'approved'`: an approval carries an expiry, so a
+year-old yes is no longer something you may act on.
+
+To seat a doctor in a clinic **you did not provision**, ask its director instead:
+
+```ts
+await platform.consents.requestClinicMembership(doctorPublicId, clinicPublicId);
+```
+
+Asking twice does not create two requests — the open one comes back as it stands, so a retry or a
+double tap cannot pester the person on the other side.
+
+Polling `status()` is the fallback. The real answer arrives as a `consent.*` webhook — see below.
+### Your own owner identifier
+
+`external_owner_id` is the id this person has in **your** system. Send it when creating an owner
+(or on an inline owner during animal registration) and it comes back from `owners.create`,
+`owners.search`, and from owners embedded through the `owners` expand.
+
+```ts
+await client.owners.create({
+  email: 'jane@example.com',
+  external_owner_id: 'crm-4471',
+  consent: { account_creation: true },
+});
+
+const owner = await client.owners.search('jane@example.com');
+owner?.external_owner_id; // 'crm-4471'
+```
+
+Two properties worth knowing before you rely on it:
+
+- **Written once**, on first contact, and **never overwritten** — sending a different value later
+  does not change it.
+- **Scoped to your integration**: you only ever see the id you sent. What another partner calls the
+  same person is not visible to you, and yours is not visible to them.
+
+It is the key both sides join on when your export has to be reconciled against our records.
+
+## Notes
+
 - `owners.search`, `animals.get`, and `procedures.get` return `null` on `404`
   instead of throwing.
 - Non-2xx responses throw `AnimalIdApiError` (or `AnimalIdValidationError` for 422),
@@ -161,14 +272,32 @@ this.aid.getDictionaries({ lang: 'uk' }).subscribe(/* … */);
 
 ```ts
 // NestJS
-import { AnimalIdModule, AnimalIdService } from '@animal-id/partner-nestjs';
+import { AnimalIdModule, AnimalIdService, AnimalIdPlatformService } from '@animal-id/partner-nestjs';
 
-@Module({ imports: [AnimalIdModule.forRoot({ credentials })] })
+@Module({
+  imports: [
+    AnimalIdModule.forRoot({ credentials: doctorKey }),        // data plane
+    AnimalIdModule.forPlatform({ credentials: platformKey }),  // provisioning plane
+  ],
+})
 export class AppModule {}
 
-constructor(private readonly aid: AnimalIdService) {}
+constructor(
+  private readonly aid: AnimalIdService,
+  private readonly platform: AnimalIdPlatformService,
+) {}
+
 await this.aid.owners.create({ email, consent: { account_creation: true } });
+await this.platform.clinics.provision({ external_org_id, name, director_public_id });
 ```
+
+Two registrations because they take two different keys — injecting the wrong service should fail
+at compile time rather than as a runtime `401`.
+
+> **The provisioning plane is server-side only.** The React, Vue and Angular adapters deliberately
+> do not expose `PlatformClient`: a platform key provisions accounts and mints credentials, and it
+> has no business in a browser bundle. Use it from NestJS, a Next.js route handler, or any other
+> server.
 
 See each package's README for the full list of hooks/composables/methods.
 
@@ -252,6 +381,33 @@ app.post('/animal-id/webhook', async (req, res) => {
 - Disable the replay check with `new WebhookVerifier(secret, { tolerance: 0 })`.
 - `headers` accepts a Fetch `Headers`, Node's `req.headers`, or any plain object.
 - Failed deliveries can be resent from your cabinet (delivery log).
+
+### Consent events
+
+How your permission requests ended: `consent.approved`, `consent.denied`, `consent.revoked`,
+`consent.expired`.
+
+**Handle `consent.revoked`.** A permission can be withdrawn at any time — possibly months after it
+was given — and a handed-over key stops working the moment it is. Without the event you find out
+when your next call fails.
+
+```ts
+import { isConsentEvent } from '@animal-id/partner-core';
+
+if (isConsentEvent(event)) {
+  event.result.consent_id;  // the id the provisioning call returned
+  event.result.kind;        // 'key_handover' | 'clinic_membership'
+  event.result.doctor_id;   // public id, for a key handover
+  event.result.clinic_id;   // public id, for a clinic membership
+
+  if (event.event === 'consent.revoked') {
+    // That doctor's key is already dead — drop it from your store.
+  }
+  if (event.event === 'consent.expired') {
+    // Nobody answered. Not a refusal — you may ask again.
+  }
+}
+```
 
 ## Develop
 

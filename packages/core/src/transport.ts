@@ -13,6 +13,12 @@ const DEFAULT_BASE_URL = 'https://gw.animal-id.net';
 const API_PREFIX = '/v1/partner';
 
 /**
+ * The provisioning plane. A separate route group on the server resolving a different application
+ * type — not a scope of the same key, which is why it is a separate prefix and a separate client.
+ */
+export const PLATFORM_API_PREFIX = '/v1/platform';
+
+/**
  * API version this SDK targets (X-Eternity-Animal-ID-Version). From this version, owners are
  * attached at registration by `public_id` rather than the legacy numeric `user_gid`. Override
  * with `version` in the client config to pin an older contract.
@@ -23,7 +29,7 @@ export type QueryValue = string | number | boolean | undefined | null;
 
 export interface RequestSpec {
   method: HttpMethod;
-  /** Path relative to `/v1/partner`, e.g. `/owners` or `/animals/{id}`. */
+  /** Path relative to the plane prefix, e.g. `/owners` or `/animals/{id}`. */
   path: string;
   query?: Record<string, QueryValue>;
   /** JSON body — serialized once and the same bytes are both signed and sent. */
@@ -56,8 +62,14 @@ export class Transport {
   private readonly idempotencyKeyFactory: () => string;
   private readonly now: () => number;
   private readonly defaultHeaders: Record<string, string>;
+  private readonly apiPrefix: string;
 
-  constructor(config: AnimalIdClientConfig) {
+  /**
+   * @param apiPrefix Which plane this transport speaks to. Defaults to the partner data plane;
+   *                  {@link PlatformClient} passes {@link PLATFORM_API_PREFIX}.
+   */
+  constructor(config: AnimalIdClientConfig, apiPrefix: string = API_PREFIX) {
+    this.apiPrefix = apiPrefix;
     this.baseUrl = (config.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, '');
 
     const fetchImpl = config.fetch ?? (globalThis.fetch as FetchLike | undefined);
@@ -90,7 +102,8 @@ export class Transport {
   }
 
   async request<T = unknown>(spec: RequestSpec, opts: RequestOptions = {}): Promise<TransportResult<T>> {
-    const relativePath = API_PREFIX + ensureLeadingSlash(spec.path) + buildQueryString(spec.query);
+    const relativePath =
+      this.apiPrefix + ensureLeadingSlash(spec.path) + buildQueryString(spec.query);
     const url = new URL(this.baseUrl + relativePath);
     // The signed path must match exactly what is sent (path + query, after the origin).
     const pathForSignature = url.pathname + url.search;

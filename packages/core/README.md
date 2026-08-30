@@ -36,16 +36,63 @@ const found = await client.animals.findByIdentifier('microchip', '90026300012345
 | `idempotencyKeyFactory` | random UUID v4 | override the idempotency key generator |
 | `defaultHeaders` | — | extra headers on every request |
 
+### Your own owner identifier
+
+`external_owner_id` is the id this person has in **your** system. Send it when creating an owner
+(or on an inline owner during animal registration) and it comes back from `owners.create`,
+`owners.search`, and from owners embedded through the `owners` expand.
+
+```ts
+await client.owners.create({
+  email: 'jane@example.com',
+  external_owner_id: 'crm-4471',
+  consent: { account_creation: true },
+});
+
+const owner = await client.owners.search('jane@example.com');
+owner?.external_owner_id; // 'crm-4471'
+```
+
+Two properties worth knowing before you rely on it:
+
+- **Written once**, on first contact, and **never overwritten** — sending a different value later
+  does not change it.
+- **Scoped to your integration**: you only ever see the id you sent. What another partner calls the
+  same person is not visible to you, and yours is not visible to them.
+
+It is the key both sides join on when your export has to be reconciled against our records.
+
 ## Resources
 
 - `dictionaries.get(params?)` — public, ETag-cacheable (`ifNoneMatch` → `notModified`).
-- `owners.create(input)`, `owners.search(emailOrPhone)` *(→ `null` on 404)*.
+- `owners.create(input)`, `owners.search(emailOrPhone)` *(→ `null` on 404)* — both accept and
+  return `external_owner_id`, your own id for the person.
 - `animals.create(input)`, `animals.get(id)` *(→ `null`)*, `animals.findByIdentifier(type, value)`,
   `animals.findByIdentifierAny(value)`, `animals.findByOwner(emailOrPhone)`, `animals.update(id, input)`.
 - `procedures.create(animalId, body)`, `procedures.list(animalId, params?)`, `procedures.get(id)` *(→ `null`)*.
 - `photos.upload(animalId, { file, kind? })`, `photos.delete(animalId, photoId)`.
 
 Every method accepts a final `RequestOptions` argument: `{ idempotencyKey?, signal?, headers?, version? }`.
+
+### Provisioning plane (`PlatformClient`)
+
+A **separate client** for a separate key. The server has two route groups resolving different
+application types, so a platform key answers `401` on `/v1/partner/` and a doctor's key answers
+`401` on `/v1/platform/`. Server-side only — a platform key mints credentials and has no business
+in a browser bundle.
+
+- `clinics.search({ query, limit? })` — search before you provision; `Clinic.linked` says whether
+  it is one of yours. `clinics.provision(input)` — a stable `external_org_id` makes a retried
+  signup resolve to the same clinic instead of making another.
+- `doctors.seat(clinicPublicId, input)` — create/match the doctor, seat them, return their key.
+  **`private_key` comes back once.** `doctors.credentials(clinicPublicId, doctorPublicId)` — for a
+  doctor who already exists and has agreed to the handover.
+- `consents.requestKeyHandover(doctorPublicId)`,
+  `consents.requestClinicMembership(doctorPublicId, clinicPublicId)`, `consents.status(publicId)`.
+  Asking twice returns the open request rather than raising a second.
+- `isConsentUsable(consent)` — not the same as `status === 'approved'`: an approval expires, so a
+  year-old yes is not something you may act on. `isConsentFinished(consent)` — denied, expired or
+  revoked.
 
 ## Errors
 

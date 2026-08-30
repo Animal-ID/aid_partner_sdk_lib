@@ -40,6 +40,29 @@ describe('owners', () => {
     expect(owner.user_gid).toBe(42);
   });
 
+  it('sends external_owner_id and reads it back', async () => {
+    const { client, calls } = makeClient({
+      status: 201,
+      body: { payload: { user_gid: 42, has_account: true, external_owner_id: 'crm-4471' } },
+    });
+
+    const owner = await client.owners.create({
+      email: 'a@b.c',
+      external_owner_id: 'crm-4471',
+      consent: { account_creation: true },
+    });
+
+    expect(JSON.parse(calls[0].body as string).external_owner_id).toBe('crm-4471');
+    expect(owner.external_owner_id).toBe('crm-4471');
+  });
+
+  it('leaves external_owner_id undefined for owners you never labelled', async () => {
+    // Also the case for someone only another partner labelled — their id is never exposed here.
+    const { client } = makeClient({ status: 200, body: { payload: { user_gid: 7 } } });
+
+    expect((await client.owners.search('a@b.c'))?.external_owner_id).toBeUndefined();
+  });
+
   it('returns the owner on search and null on 404', async () => {
     const found = makeClient({ status: 200, body: { payload: { user_gid: 7 } } });
     expect((await found.client.owners.search('a@b.c'))?.user_gid).toBe(7);

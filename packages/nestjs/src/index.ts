@@ -6,8 +6,10 @@
 
 export { AnimalIdModule } from './animal-id.module.js';
 export { AnimalIdService } from './animal-id.service.js';
+export { AnimalIdPlatformService } from './animal-id-platform.service.js';
 export {
   ANIMAL_ID_OPTIONS,
+  ANIMAL_ID_PLATFORM_OPTIONS,
   type AnimalIdModuleOptions,
   type AnimalIdModuleAsyncOptions,
   type AnimalIdOptionsFactory,

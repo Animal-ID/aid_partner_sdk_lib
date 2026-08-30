@@ -138,6 +138,11 @@ export interface CreateOwnerInput {
   language?: string;
   /** Zero-padded ISO 3166-1 numeric string (e.g. "804"). */
   country?: string;
+  /**
+   * Your own id for this person. Stored once, on first contact, and never overwritten.
+   * Scoped to your integration — you never see the id another partner uses for the same person.
+   */
+  external_owner_id?: string;
   consent: Consent;
 }
 
@@ -152,6 +157,11 @@ export interface Owner {
   display_hint: string;
   language?: string | null;
   country_id?: number | null;
+  /**
+   * Your own id for this person. Stored once, on first contact, and never overwritten.
+   * Scoped to your integration — you never see the id another partner uses for the same person.
+   */
+  external_owner_id?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -170,6 +180,11 @@ export interface AnimalOwnerInput {
   last_name?: string;
   language?: string;
   country?: string;
+  /**
+   * Your own id for this person. Stored once, on first contact, and never overwritten.
+   * Scoped to your integration — you never see the id another partner uses for the same person.
+   */
+  external_owner_id?: string;
   /** Inline mode: required when registering a brand-new owner. */
   consent?: Consent;
 }
@@ -254,6 +269,11 @@ export interface AnimalOwnerExpanded {
   language?: string | null;
   /** Zero-padded ISO 3166-1 numeric string (e.g. "804"). */
   country_id?: string | null;
+  /**
+   * Your own id for this person. Stored once, on first contact, and never overwritten.
+   * Scoped to your integration — you never see the id another partner uses for the same person.
+   */
+  external_owner_id?: string | null;
   is_main_owner: boolean;
 }
 
@@ -401,6 +421,10 @@ export interface UploadedPhoto {
 export type WebhookEventType =
   | 'animal_access.approved'
   | 'animal_access.denied'
+  | 'consent.approved'
+  | 'consent.denied'
+  | 'consent.revoked'
+  | 'consent.expired'
   | (string & {});
 
 /** A decoded webhook delivery. Wire shape: `{ id, event, occurred_at, result }`. */
@@ -430,3 +454,127 @@ export interface AnimalAccessWebhookResult {
 export type AnimalAccessWebhookEvent = WebhookEvent<AnimalAccessWebhookResult> & {
   event: 'animal_access.approved' | 'animal_access.denied';
 };
+
+/** `result` payload of the `consent.*` events. Public identifiers throughout. */
+export interface ConsentWebhookResult {
+  /** The request this outcome belongs to — the same id the provisioning call returned. */
+  consent_id: string;
+  kind: ConsentKind;
+  status: Exclude<ConsentStatus, 'pending'>;
+  /** The doctor, for a key handover. Null otherwise, and null if the account has since gone. */
+  doctor_id: string | null;
+  /** The clinic, for a clinic membership. Null otherwise. */
+  clinic_id: string | null;
+  /** ISO 8601. For an expiry this is the deadline, not when we noticed. */
+  decided_at: string;
+}
+
+/** Discriminated alias for the consent-outcome events. */
+export type ConsentWebhookEvent = WebhookEvent<ConsentWebhookResult> & {
+  event: 'consent.approved' | 'consent.denied' | 'consent.revoked' | 'consent.expired';
+};
+
+// --- Provisioning plane -------------------------------------------------------------------
+
+/**
+ * What a partner may ask for and cannot take:
+ *
+ * - `key_handover` — hold credentials that act as a doctor. Only that doctor can allow it,
+ *   because the key signs as them.
+ * - `clinic_membership` — seat a doctor in a clinic you did not provision. Its director decides.
+ */
+export type ConsentKind = 'key_handover' | 'clinic_membership';
+
+/**
+ * `expired` is not `denied`: nobody refused, nobody looked — you may ask again.
+ * `revoked` means a permission you held was taken back, and a handed-over key is already dead.
+ */
+export type ConsentStatus = 'pending' | 'approved' | 'denied' | 'expired' | 'revoked';
+
+/** A permission request and where it stands. */
+export interface ConsentRequest {
+  /** Poll the status endpoint with this. */
+  public_id: string;
+  kind: ConsentKind;
+  status: ConsentStatus;
+  /** Unix seconds. An unanswered request closes itself; an approval stops working at the same moment. */
+  expires_at: number;
+  /** Unix seconds, or null while nobody has answered. */
+  decided_at: number | null;
+}
+
+/** Clinic card from the provisioning plane — search results and the clinic you just provisioned. */
+export interface Clinic {
+  /** Stable public clinic identifier; pass it wherever a clinic is named. */
+  public_id: string;
+  /** Provisioning returns `name`; search returns `org_name`. */
+  name?: string;
+  org_name?: string;
+  full_address?: string;
+  /** Moderation status. A provisioned clinic stays out of the public directory until claimed. */
+  status?: number;
+  /** True when this clinic is one you provisioned yourself. Absent outside search results. */
+  linked?: boolean;
+  /** True when this call created it, false when it resolved the one you already had. */
+  created?: boolean;
+}
+
+export interface SearchClinicsParams {
+  /** Name or address fragment, at least 2 characters. */
+  query: string;
+  /** Up to 50 (default 20 server-side). */
+  limit?: number;
+}
+
+/** Everything needed to provision a clinic. A clinic cannot exist without a director. */
+export interface ProvisionClinicInput {
+  /**
+   * Your own identifier for this clinic. Send a **stable** value: a repeat call with the same one
+   * resolves to the clinic you already have instead of creating another.
+   */
+  external_org_id: string;
+  name: string;
+  /** The doctor who takes the director seat. A doctor may direct only one clinic. */
+  director_public_id: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  address?: string;
+  country_id?: number;
+  description?: string;
+  lat?: number;
+  lng?: number;
+}
+
+/** Everything needed to seat a doctor. One of email/phone is required, as is consent. */
+export interface SeatDoctorInput {
+  email?: string;
+  phone?: string;
+  first_name?: string;
+  last_name?: string;
+  language?: string;
+  /** Label shown on the issued credentials. */
+  clinic_name?: string;
+  /** Your own id for this doctor — written once, never overwritten, only ever visible to you. */
+  external_doctor_id?: string;
+  /** The credentials act as this person, so their agreement is required. */
+  consent: Consent;
+}
+
+/**
+ * A doctor and the key pair that signs the data plane as them.
+ *
+ * **`private_key` is returned in this one response and never again.** Store it before you discard
+ * the object; asking again answers 409 while the existing key is active.
+ */
+export interface DoctorCredentials {
+  /** The doctor's stable public identifier. */
+  public_id: string;
+  /** App-Id this doctor signs data-plane calls with (X-Eternity-App-Id). */
+  app_id: string;
+  public_key: string;
+  /** Never returned again. */
+  private_key: string;
+  /** True when this call created the account, false when an existing doctor was matched. */
+  created: boolean;
+}
