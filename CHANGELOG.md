@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-10-20
+
 ### Added
 
 - **Неверифіковані процедури** (`@animal-id/partner-core`). Ветеринар без доступу до тварини тепер може записувати процедури: вони зберігаються неверифікованими, доки власник не вирішить. `ProcedureListItem.verification_status` / `verified_at`, тип `ProcedureVerificationStatus`; `CreateProceduresResult.access_request` — запит на доступ, під яким записано партію.
