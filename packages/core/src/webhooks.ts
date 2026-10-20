@@ -1,6 +1,6 @@
 import { getSubtle, hmacSha256Hex, sha256Hex } from './crypto.js';
 import { AnimalIdWebhookError } from './errors.js';
-import type { AnimalAccessWebhookEvent, ConsentWebhookEvent, WebhookEvent } from './types.js';
+import type { AnimalAccessWebhookEvent, ConsentWebhookEvent, ProceduresWebhookEvent, WebhookEvent } from './types.js';
 
 const HEADER_SIGNATURE = 'x-eternity-webhook-signature';
 const HEADER_TIMESTAMP = 'x-eternity-webhook-timestamp';
@@ -115,6 +115,14 @@ export class WebhookVerifier {
 /** True for `animal_access.approved` / `animal_access.denied` — narrows `result` to the typed shape. */
 export function isAnimalAccessEvent(event: WebhookEvent): event is AnimalAccessWebhookEvent {
   return event.event === 'animal_access.approved' || event.event === 'animal_access.denied';
+}
+
+/**
+ * True for `procedures.verified` / `procedures.rejected` — the owner's decision on procedures you
+ * recorded without access to the animal. Narrows `result` to the typed shape.
+ */
+export function isProceduresEvent(event: WebhookEvent): event is ProceduresWebhookEvent {
+  return event.event === 'procedures.verified' || event.event === 'procedures.rejected';
 }
 
 /**

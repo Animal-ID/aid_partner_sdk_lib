@@ -1,6 +1,6 @@
 import { createHash, createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { AnimalIdWebhookError, WebhookVerifier, isAnimalAccessEvent } from '@animal-id/partner-core';
+import { AnimalIdWebhookError, WebhookVerifier, isAnimalAccessEvent, isProceduresEvent } from '@animal-id/partner-core';
 import type { AnimalAccessWebhookResult } from '@animal-id/partner-core';
 import { TEST_SUBTLE } from '../../../test-utils/mock';
 
@@ -124,6 +124,30 @@ describe('WebhookVerifier', () => {
   it('parse() decodes without verifying', () => {
     const event = verifier().parse(body('animal_access.denied'));
     expect(event.event).toBe('animal_access.denied');
+  });
+
+  it('recognises the procedures.* events and their procedures', () => {
+    const event = verifier().parse(
+      JSON.stringify({
+        id: 'e-2',
+        event: 'procedures.verified',
+        occurred_at: '2026-05-31T10:00:00+00:00',
+        result: {
+          animal_id: '8xK3pQzVnB7rL2qF',
+          requester_user_gid: 90231,
+          decided_at: '2026-05-31T10:00:00+00:00',
+          procedures: [{ id: 99001, visit_id: null, type: 10, occurred_at: '2026-05-30T08:00:00+00:00', verification_status: 'verified' }],
+        },
+      }),
+    );
+
+    expect(isProceduresEvent(event)).toBe(true);
+    expect(isAnimalAccessEvent(event)).toBe(false);
+    if (isProceduresEvent(event)) {
+      expect(event.result.procedures[0].id).toBe(99001);
+      expect(event.result.procedures[0].verification_status).toBe('verified');
+    }
+    expect(isProceduresEvent(verifier().parse(body('animal_access.denied')))).toBe(false);
   });
 
   it('parse() rejects a non-event body', () => {
