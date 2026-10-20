@@ -26,6 +26,7 @@ export {
   WebhookVerifier,
   isAnimalAccessEvent,
   isConsentEvent,
+  isProceduresEvent,
   DEFAULT_WEBHOOK_TOLERANCE_SECONDS,
 } from './webhooks.js';
 export type { WebhookHeaders, WebhookVerifierOptions } from './webhooks.js';
@@ -88,6 +89,8 @@ export type {
   AnimalAccessWebhookEvent,
   ConsentWebhookResult,
   ConsentWebhookEvent,
+  ProceduresWebhookResult,
+  ProceduresWebhookEvent,
   // provisioning plane
   Clinic,
   ConsentKind,

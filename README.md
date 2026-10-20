@@ -130,10 +130,16 @@ All methods live under typed resources on the client:
 | `client.procedures` | `create(animalId, body)`, `list(animalId, params?)`, `get(procedureId)` |
 | `client.photos` | `upload(animalId, { file, kind? })`, `delete(animalId, photoId)` |
 
-- Editing an animal (update / procedures / photos) needs access. Without it the API
-  answers `403`; call `animals.requestAccess(id)` and retry once the owner approves
-  (you'll get an `animal_access.approved` webhook — see **Webhooks**). Check the
-  current state any time with `animals.accessStatus(id)` (`granted`/`pending`/`denied`/`none`).
+- Editing an animal (update / photos) needs access. Without it the API answers `403`;
+  call `animals.requestAccess(id)` and retry once the owner approves (you'll get an
+  `animal_access.approved` webhook — see **Webhooks**). Check the current state any time
+  with `animals.accessStatus(id)` (`granted`/`pending`/`denied`/`none`).
+- Procedures can be recorded **without access**: they are saved with
+  `verification_status: 'unverified'`, no visit is opened (`appointment_id: null`), nothing on
+  the animal changes yet, and `result.access_request` is the access request the owner answers.
+  Approving gives you access and verifies them; declining removes them, and while the decline
+  is in force new procedures for the animal answer `403`. You see only your own unverified
+  procedures. The decision arrives as a `procedures.verified` / `procedures.rejected` webhook.
 - Every animal card carries `abilities.can_edit`. Pass `{ expand: ['owners'] }` to a
   lookup to embed `owners[]` (with `is_main_owner`):
   `await client.animals.get(id, { expand: ['owners'] })`.
@@ -381,6 +387,25 @@ app.post('/animal-id/webhook', async (req, res) => {
 - Disable the replay check with `new WebhookVerifier(secret, { tolerance: 0 })`.
 - `headers` accepts a Fetch `Headers`, Node's `req.headers`, or any plain object.
 - Failed deliveries can be resent from your cabinet (delivery log).
+
+### Procedure events
+
+The owner's decision on procedures you recorded without access: `procedures.verified` or
+`procedures.rejected`. They come in addition to `animal_access.*`, in no fixed order with it, and
+a verified procedure's change to the animal (chip, tag, sterilization, death) is applied separately
+— it may land after the event.
+
+```ts
+import { isProceduresEvent } from '@animal-id/partner-core';
+
+if (isProceduresEvent(event)) {
+  event.result.animal_id;          // animal public id
+  for (const procedure of event.result.procedures) {
+    procedure.id;
+    procedure.verification_status; // 'verified' | 'rejected'
+  }
+}
+```
 
 ### Consent events
 

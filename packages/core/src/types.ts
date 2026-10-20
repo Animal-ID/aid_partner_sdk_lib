@@ -362,22 +362,37 @@ export interface ProcedureRecord {
 }
 
 export interface CreateProceduresResult {
-  /** The visit opened/used for this batch. */
-  appointment_id: number;
+  /** The visit opened for this batch; null when it was recorded unverified (no access to the animal). */
+  appointment_id: number | null;
   /** The recorded procedures — same card as GET list/show. */
   procedures: ProcedureListItem[];
+  /**
+   * The access request an unverified batch was recorded under — the owner's decision on it verifies
+   * or removes the procedures. Null (or absent on older gateways) when you have access.
+   */
+  access_request?: AnimalAccessRequest | null;
 }
+
+/**
+ * `verified` — recorded with access to the animal, or confirmed by the owner;
+ * `unverified` — recorded without access and awaiting the owner's decision.
+ */
+export type ProcedureVerificationStatus = 'verified' | 'unverified';
 
 export interface ProcedureListItem {
   id: number;
   animal_id: string;
-  /** Appointment the procedure was recorded under. */
-  visit_id: number;
+  /** Appointment the procedure was recorded under; null for an unverified batch. */
+  visit_id: number | null;
   type: number;
   occurred_at: string;
   summary: string | null;
   revaccination_date: string | null;
   type_specific_payload?: Record<string, unknown>;
+  /** Absent on older gateways, which answered verified procedures only. */
+  verification_status?: ProcedureVerificationStatus;
+  /** ISO 8601 — when the owner confirmed it; null when recorded with access or still unverified. */
+  verified_at?: string | null;
 }
 
 export interface ProcedureListParams {
@@ -425,6 +440,8 @@ export type WebhookEventType =
   | 'consent.denied'
   | 'consent.revoked'
   | 'consent.expired'
+  | 'procedures.verified'
+  | 'procedures.rejected'
   | (string & {});
 
 /** A decoded webhook delivery. Wire shape: `{ id, event, occurred_at, result }`. */
@@ -453,6 +470,32 @@ export interface AnimalAccessWebhookResult {
 /** Discriminated alias for the access-decision events. */
 export type AnimalAccessWebhookEvent = WebhookEvent<AnimalAccessWebhookResult> & {
   event: 'animal_access.approved' | 'animal_access.denied';
+};
+
+/** `result` payload of the `procedures.*` events. */
+export interface ProceduresWebhookResult {
+  animal_id: string;
+  /** The vet who recorded the procedures. */
+  requester_user_gid: number | null;
+  /** ISO 8601 — when the owner decided. */
+  decided_at: string;
+  /** Each procedure the decision covered, with its new status. */
+  procedures: Array<{
+    id: number;
+    visit_id: number | null;
+    type: number;
+    occurred_at: string;
+    verification_status: 'verified' | 'rejected';
+  }>;
+}
+
+/**
+ * Discriminated alias for the procedure-decision events. They come in addition to `animal_access.*`
+ * and in no fixed order with it; a verified procedure's change to the animal (chip, tag,
+ * sterilization, death) is applied separately and may land after the event.
+ */
+export type ProceduresWebhookEvent = WebhookEvent<ProceduresWebhookResult> & {
+  event: 'procedures.verified' | 'procedures.rejected';
 };
 
 /** `result` payload of the `consent.*` events. Public identifiers throughout. */

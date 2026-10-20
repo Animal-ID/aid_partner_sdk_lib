@@ -125,6 +125,24 @@ describe('procedures', () => {
     expect(JSON.parse(batch.calls[0].body as string)).toHaveLength(2);
   });
 
+  it('returns an unverified batch with its access request and no visit', async () => {
+    const unverified = makeClient({
+      status: 201,
+      body: {
+        payload: {
+          appointment_id: null,
+          procedures: [{ id: 9, visit_id: null, verification_status: 'unverified', verified_at: null }],
+          access_request: { status: 'pending', requested_at: '2026-05-30T08:00:00+00:00', expires_at: '2026-06-06T08:00:00+00:00', retry_after_seconds: 604800 },
+        },
+      },
+    });
+    const result = await unverified.client.procedures.create('a1', { type: 10, occurred_at: '2026-05-30T08:00:00Z' });
+
+    expect(result.appointment_id).toBeNull();
+    expect(result.procedures[0].verification_status).toBe('unverified');
+    expect(result.access_request?.status).toBe('pending');
+  });
+
   it('lists with filters and gets one (null on 404)', async () => {
     const list = makeClient({ status: 200, body: { payload: [{ id: 9, type: 10 }] } });
     expect(await list.client.procedures.list('a1', { type: 10, since: '2026-01-01', until: '2026-02-01' })).toHaveLength(1);

@@ -70,6 +70,8 @@ It is the key both sides join on when your export has to be reconciled against o
 - `animals.create(input)`, `animals.get(id)` *(→ `null`)*, `animals.findByIdentifier(type, value)`,
   `animals.findByIdentifierAny(value)`, `animals.findByOwner(emailOrPhone)`, `animals.update(id, input)`.
 - `procedures.create(animalId, body)`, `procedures.list(animalId, params?)`, `procedures.get(id)` *(→ `null`)*.
+  Without access to the animal a batch is recorded unverified: `appointment_id` is `null` and
+  `access_request` is the request the owner answers; each card carries `verification_status`.
 - `photos.upload(animalId, { file, kind? })`, `photos.delete(animalId, photoId)`.
 
 Every method accepts a final `RequestOptions` argument: `{ idempotencyKey?, signal?, headers?, version? }`.
